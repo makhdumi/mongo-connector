@@ -459,6 +459,9 @@ class OplogThread(threading.Thread):
         elif entry['op'] == 'u':
             entry['o'] = filter_fields(entry_o, fields)
 
+        if include_fields and (entry['op'] == 'u' or entry['op'] == 'i') and entry['o'].keys() == ['_id']:
+            entry = {}            
+            
         return entry
 
     def get_oplog_cursor(self, timestamp=None):
