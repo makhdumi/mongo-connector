@@ -777,8 +777,11 @@ class OplogThread(threading.Thread):
             LOG.debug("OplogThread: Initiating rollback from "
                       "get_oplog_cursor: new oplog entries found but "
                       "checkpoint is not present")
-            self.update_checkpoint(self.rollback())
-            return self.init_cursor()
+            updated = self.update_checkpoint(self.rollback())
+            # TODO: hack D:! This needs to be removed once rollbacks are implemented in the docmanager
+            # this is probably still a bug, but a better solution should be discussed with the MongoDB team
+            if updated:
+                return self.init_cursor()
 
         # first entry has been consumed
         return cursor, cursor_empty
@@ -800,8 +803,10 @@ class OplogThread(threading.Thread):
                 oplog_dict[self.replset_name] = checkpoint
                 LOG.debug("OplogThread: oplog checkpoint updated to %s",
                           checkpoint)
+                return True
         else:
             LOG.debug("OplogThread: no checkpoint to update.")
+            return False
 
     def read_last_checkpoint(self):
         """Read the last checkpoint from the oplog progress dictionary.
