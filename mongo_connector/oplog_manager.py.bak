@@ -219,6 +219,7 @@ class OplogThread(threading.Thread):
                     LOG.debug("OplogThread: Cursor is still"
                               " alive and thread is still running.")
                     for n, entry in enumerate(cursor):
+                        #before = time.time()
                         # Break out if this thread should stop
                         if not self.running:
                             break
@@ -233,6 +234,7 @@ class OplogThread(threading.Thread):
                             # our checkpoint does not fall off the oplog. This
                             # also prevents reprocessing skipped entries.
                             last_ts = entry['ts']
+                            #print("SKIP ns = {}, time = {}".format(entry['ns'], (time.time() - before) * 1000))
                             continue
 
                         # Sync the current oplog operation
@@ -299,6 +301,7 @@ class OplogThread(threading.Thread):
 
                         LOG.debug("OplogThread: Doc is processed.")
 
+                        #print("ns = {}, time = {}".format(ns, (time.time() - before) * 1000))
                         last_ts = entry['ts']
 
                         # update timestamp per batch size
@@ -469,9 +472,9 @@ class OplogThread(threading.Thread):
         """
         query = {'op': {'$ne': 'n'}}
 
-        # TODO: this is broken for regex mapped namespces
-        query['ns'] = { '$in': self.namespace_config._plain.keys() }
-       
+        # TODO: clean this up
+        query['ns'] = { '$in': ['Ops2.AirWaybill'] }
+
         if timestamp is None:
             cursor = self.oplog.find(
                 query,
@@ -778,8 +781,7 @@ class OplogThread(threading.Thread):
                       "get_oplog_cursor: new oplog entries found but "
                       "checkpoint is not present")
             updated = self.update_checkpoint(self.rollback())
-            # TODO: hack D:! This needs to be removed once rollbacks are implemented in the docmanager
-            # this is probably still a bug, but a better solution should be discussed with the MongoDB team
+            # hack D:
             if updated:
                 return self.init_cursor()
 
@@ -803,8 +805,10 @@ class OplogThread(threading.Thread):
                 oplog_dict[self.replset_name] = checkpoint
                 LOG.debug("OplogThread: oplog checkpoint updated to %s",
                           checkpoint)
+                return True
         else:
             LOG.debug("OplogThread: no checkpoint to update.")
+            return False
 
     def read_last_checkpoint(self):
         """Read the last checkpoint from the oplog progress dictionary.
